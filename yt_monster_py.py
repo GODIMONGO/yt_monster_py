@@ -1,11 +1,64 @@
 import requests
+import speedtest
 import json
 import time
 from datetime import datetime
-import base64
 token_task = ''
 token_work = ''
 id_task = ''
+# Версия библиотеки 1.8
+def Versoin():
+    return '1.8'
+
+
+def replace_line_in_file(file_path, line_number, replacement):
+    """
+    Заменяет указанную строку в файле на указанное значение.
+
+    Args:
+    file_path (str): Путь к файлу, в котором нужно заменить строку.
+    line_number (int): Номер строки в файле, которую нужно заменить.
+    replacement (str): Значение, на которое нужно заменить строку.
+
+    Raises:
+    FileNotFoundError: Если указанный файл не найден.
+    IndexError: Если указанный номер строки выходит за пределы файла.
+    """
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return 'err', (f'Файл "{file_path}" не найден')
+    try:
+        lines[line_number - 1] = replacement + '\n'
+    except IndexError:
+        return 'err', (f'Номер строки {line_number} выходит за пределы файла "{file_path}"')
+    with open(file_path, 'w') as f:
+        f.writelines(lines)
+        return 'ok', 'ok'
+
+
+def read_file(file_path):
+    """
+    Читает содержимое файла и возвращает его в виде списка строк.
+
+    Args:
+    file_path (str): Путь к файлу, который нужно прочитать.
+
+    Returns:
+    list[str]: Список строк с содержимым файла.
+
+    Raises:
+    FileNotFoundError: Если указанный файл не найден.
+    """
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            return 'ok', lines
+    except FileNotFoundError:
+        return 'err', (f'Файл "{file_path}" не найден')
+
+
 def log(text): #Логирование в фаел лога
     with open('log.txt', 'a') as f:
         f.write('\n' + str(datetime.now()) + '  ' + text)
@@ -26,7 +79,7 @@ def ytmonster_error(error):#обработка ошибок
         err = 'Отсутвует токен'
         return '', err
     elif error == 1002:
-        err =  'Не найден токен'
+        err = 'Не найден токен'
         return '', err
     elif error == 1003:
         err = "Токен отключен Включите токен на сайте: https://ytmonster.ru/api/#key"
@@ -105,18 +158,23 @@ def ytmonster_req(token, task, id=''): #запрос к ytmonster и обраб�
             b = 0
             mess = '--------------\n'
             while len(json1['response']) > b:
-                mess = mess + '\nНомер клиента: ' + str(b) + '\nID клиента: ' + str(json1["response"][b]["id"]) + \
-                       '\nТип браузера: ' + str(json1["response"][b]["type_browse"]["name"]) + '\nОсталось просмотреть: ' + str(json1["response"][b]["info"]["sec"]) + ' сек.' + \
-                       '\nСылка на просмотриваемое видео: https://www.youtube.com/watch?v=' + json1["response"][b]["info"]["http"] + \
-                       '\nКоличество ошибок при просмотре: ' + str(json1["response"][b]["info"]["error"]) + \
-                       '\nIP клиента: ' + str(json1["response"][b]["info"]["ip"]) + \
-                       '\nСтатус аккаунта ютуб:' + str(json1["response"][b]["accounts"]["youtube"]) + \
-                       '\nПросмотрел видео: ' + str(json1["response"][b]["data"]["count"]) + \
-                       '\nЗаработал за просмотр видео: ' + str(json1["response"][b]["data"]["coin"]) + ' COIN' + \
-                       '\nВыполнил заданий: ' + str(json1["response"][b]["data"]["count_task"]) + \
-                       '\nЗаработал за выполнения заданий: ' + str(json1["response"][b]["data"]["coin_task"]) + '\n--------------'
+                mess = mess + '\n👤 Номер клиента: ' + str(b) + '\n🆔 ID клиента: ' + str(json1["response"][b]["id"]) + \
+                       '\n🌐 Тип браузера: ' + str(
+                    json1["response"][b]["type_browse"]["name"]) + '\n⏳ Осталось просмотреть: ' + str(
+                    json1["response"][b]["info"]["sec"]) + ' сек.' + \
+                       '\n📺 Ссылка на просмотриваемое видео: https://www.youtube.com/watch?v=' + \
+                       json1["response"][b]["info"]["http"] + \
+                       '\n❌ Количество ошибок при просмотре: ' + str(json1["response"][b]["info"]["error"]) + \
+                       '\n🌐 IP клиента: ' + str(json1["response"][b]["info"]["ip"]) + \
+                       '\n🔴 Статус аккаунта ютуб:' + str(json1["response"][b]["accounts"]["youtube"]) + \
+                       '\n👀 Просмотрел видео: ' + str(json1["response"][b]["data"]["count"]) + \
+                       '\n💰 Заработал за просмотр видео: ' + str(json1["response"][b]["data"]["coin"]) + ' COIN' + \
+                       '\n✅ Выполнил заданий: ' + str(json1["response"][b]["data"]["count_task"]) + \
+                       '\n💰 Заработал за выполнения заданий: ' + str(
+                    json1["response"][b]["data"]["coin_task"]) + '\n--------------'
                 b = b + 1
             return mess, err
+
 
         elif task == 'my_task':
             req = requests.get('https://app.ytmonster.ru/api/?my-tasks=' + id +'&offset=0&token=' + token_task)
@@ -145,17 +203,56 @@ def ytmonster_req(token, task, id=''): #запрос к ytmonster и обраб�
         err = 'Ошибка запроса к API ytmonster! Работает ли сайт?'
         return '', err
     return req, 'ok'
-        
-# Beta функция на данный момент не доработана
-def yt_monster_create_task(token, soc_name, type, href, count, coin, valh = '0', sec = '', comments = '', sec_max= '', params=''):
-    if soc_name == 'tg':
-        href = base64.b64encode(href)
-        print(href)
-    if comments != '':
-        comments = base64.b64encode(comments)
-        print(comments)
-    
-    req = requests.get('https://app.ytmonster.ru/api/?add-task='+ soc_name +'&href='+ href +'&count='+ count +'&type='+ type +'&valh='+ valh +'&coin='+ coin +'&token='+ token)
-    json1 = json.loads(req.text)
-    a, err = ytmonster_error(json1["error"])
 
+def test_speed(times): #сколько раз замерить скорость интернета
+    st = speedtest.Speedtest()
+    download_speeds = []
+    upload_speeds = []
+    for i in range(times):
+        download_speed = st.download() / 1000000  # скорость загрузки в Мбит/с
+        upload_speed = st.upload() / 1000000  # скорость отгрузки в Мбит/с
+        download_speeds.append(download_speed)
+        upload_speeds.append(upload_speed)
+        print(f"Скорость загрузки {i + 1}: {download_speed:.2f} Мбит/с")
+        print(f"Скорость отгрузки {i + 1}: {upload_speed:.2f} Мбит/с")
+    avg_download_speed = sum(download_speeds) / len(download_speeds)
+    avg_upload_speed = sum(upload_speeds) / len(upload_speeds)
+    return f"Средняя скорость загрузки: {avg_download_speed:.2f} Мбит/с" + '\n' + f"Средняя скорость отгрузки: {avg_upload_speed:.2f} Мбит/с"
+
+
+
+
+
+
+
+# Beta функция на данный момент не доработана
+
+def yt_monster_create_task_tg(task, task_href, token, reactions='', task_count=10, task_valh=0, task_coin=400):
+    if task == 'like':
+        if reactions == '':
+            return '', 'err'
+        import json
+        import base64
+        task_reactions = base64.b64encode(json.dumps({"reactions": reactions}).encode()).decode()
+        print(task_reactions)
+        print(str(base64.b64encode(task_href.encode()).decode()))
+        url = 'https://app.ytmonster.ru/api/?add-task=tg&href=' + str(base64.b64encode(task_href.encode()).decode()) + '&count=' + str(task_count) + '&type=like&valh=' + str(task_valh) + '&coin=' + str(task_coin) + '&token=' + token + '&params=' + task_reactions
+        req = requests.get(url)
+        json1 = json.loads(req.text)
+        a, err = ytmonster_error(json1["error"])
+        if err != 'ok':
+            return json1["error_response"], err
+        req = 'Статус: ' + str(json1["response"]["status"]) + '\nID: ' + str(json1["response"]["id"])
+        return req, 'ok'
+    elif task == 'view':
+        import json
+        import base64
+        print(str(base64.b64encode(task_href.encode()).decode()))
+        url = 'https://app.ytmonster.ru/api/?add-task=tg&href=' + str(base64.b64encode(task_href.encode()).decode()) + '&count=' + str(task_count) + '&type=view&valh=' + str(task_valh) + '&coin=' + str(task_coin) + '&token=' + token
+        req = requests.get(url)
+        json1 = json.loads(req.text)
+        a, err = ytmonster_error(json1["error"])
+        if err != 'ok':
+            return json1["error_response"], err
+        req = 'Статус: ' + str(json1["response"]["status"]) + '\nID: ' + str(json1["response"]["id"])
+        return req, 'ok'
