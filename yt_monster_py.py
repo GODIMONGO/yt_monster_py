@@ -8,8 +8,7 @@ token_work = ''
 id_task = ''
 # Версия библиотеки 2.0
 def Version():
-    return '2.0'
-
+    return '2.2'
 def log(text): #Логирование в фаел лога
     with open('log.txt', 'a') as f:
         f.write('\n' + str(datetime.now()) + '  ' + text)
@@ -78,13 +77,12 @@ def ytmonster_req(token, task, id=''): #запрос к ytmonster и обраб�
         elif task == 'get_client': #получение работающих клиентов
             req = requests.get('https://app.ytmonster.ru/api/?get-clients=get&token=' + token_work)
             ID_CLIENT = []
-            print(req.text)
             json1 = json.loads(req.text)
             a, err = ytmonster_error(json1["error"])
             if err != 'ok':
                 return a, err
             if req.text == """{"error":0,"response":[]}""":
-                return '', 'Нет рабочих клиентов'
+                return 'not_work', 'Нет рабочих клиентов', ID_CLIENT
             b = 0
             mess = '--------------\n'
             while len(json1['response']) > b:
