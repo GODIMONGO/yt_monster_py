@@ -6,9 +6,10 @@ from datetime import datetime
 token_task = ''
 token_work = ''
 id_task = ''
-# Версия библиотеки 2.0
+
+# Версия библиотеки 2.3
 def Version():
-    return '2.2'
+    return '2.3'
 def log(text): #Логирование в фаел лога
     with open('log.txt', 'a') as f:
         f.write('\n' + str(datetime.now()) + '  ' + text)
@@ -52,7 +53,7 @@ def ytmonster_error(error):
         return '', 'ok'
 
 
-def ytmonster_req(token, task, id=''): #запрос к ytmonster и обработка некоторых ошибок
+def ytmonster_req(token, task, id='', soc_name= '', type= ''): #запрос к ytmonster и обработка некоторых ошибок
     token_work = token[0]
     token_task = token[1]
     print('ping: ytmonster.ru ...')
@@ -120,11 +121,21 @@ def ytmonster_req(token, task, id=''): #запрос к ytmonster и обраб�
                 mess = mess + '\n'+ 'Нужно выполнить: ' + json1["response"][b]["need"] + '/Выполнено: '+ json1["response"][b]["now"] +'\nКоличество выполнения в час: '+ json1["response"][b]["valh"] +'\nID: ' + json1["response"][b]["id"] + '\n' + 'Сылка: ' + json1["response"][b]["url"] + '\n' + 'Тип: ' + json1["response"][b]["soc"] + '\n-----------'
                 b = b + 1
             return mess, err
-        elif task == 'test':
-            req = requests.get('https://app.ytmonster.ru/api/?get-task=[type]&id_account=[id_account]&token=' + token_task)
+
+        elif task == 'remove_task':
+            req = requests.get('https://app.ytmonster.ru/api/?edit-task=remove&id_task=' + id + '&soc_name=' + soc_name + '&type=' + type + '&token=' + token_work)
+            json1 = json.loads(req.text)
+            a, err = ytmonster_error(json1["error"])
+            if err != 'ok':
+                return '', err
+            else:
+                mess = json1['response']["status"]
+                print(mess)
+
         else:
             log('Ошибка выполнения функции ytmonster! Нет указания что делать')
-            return '', 'Ошибка выполнения функции ytmonster! Нет указания что делать'  
+            return '', 'Ошибка выполнения функции ytmonster! Нет указания что делать'
+
     except requests.exceptions.RequestException:
         time.sleep(10)
         print('ping err')
