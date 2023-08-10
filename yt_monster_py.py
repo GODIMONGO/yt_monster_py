@@ -6,7 +6,7 @@ url_clifl = "https://api.clifl.com/"
 
 
 def version():
-    return 3.2
+    return 3.3
 
 
 def balance_coin(token):
@@ -119,8 +119,6 @@ def get_task_list(token, platform, offset=0, limit=100):
 def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None, sec_max=None, params=None, type=None):
     global url_clifl
     from urllib.parse import parse_qs, urlparse, urlsplit, urlunsplit
-    if int(coin) > 10000:
-        return 'Возникла ошибка! Проверьте второе значение.', 'Значение  COIN не должно быть выше 10000'
     task = {"action": "mytasks-add", "token": str(token), "platform": str(platform), "count": str(count), "valh": str(valh)}
     if platform == 'tg' and type == 'view':
         task["coin"] = str(100)
@@ -131,6 +129,7 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     if type != None:
         task["type"] = str(type)
 
+
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
         if "/shorts/" in href:
             parsed_url = urlparse(href)
@@ -140,10 +139,7 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
             href = f"https://www.youtube.com/watch?v={video_id}"
         else:
             response = requests.head(href, allow_redirects=True)
-            if str(response) != '200':
-                return 'Возникла ошибка во время обработки youtube сылки посмотрите второе значение', str(response)
-
-        # Удаление параметров запроса
+            href = response.url
         href = href.split('&')[0]
 
         print(href)
@@ -160,8 +156,10 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
 
     if platform == 'tiktok':
         try:
-            response = requests.get(href, allow_redirects=True)
-            href = response.url.split('?')[0]
+            response = requests.head(href, allow_redirects=True)
+            href = response.url
+            parsed_url = urlsplit(href)
+            href = urlunsplit((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', ''))
         except Exception as e:
             return 'Возникла ошибка во время обработки TikTok сылки', str(e)
 
@@ -171,6 +169,7 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     task["href"] = str(href)
     if platform == "ytview":
         task["sec"] = str(sec)
+        print(sec)
     if platform == "ytcomm":
         comments = base64.b64encode(comments.encode('utf-8'))
         comments = comments.decode('utf-8')
@@ -276,9 +275,7 @@ def ytclients_get(token):
         return all_processed_tasks
 
 def href_format(href, platform):
-    import requests
-    from urllib.parse import urlparse, urlunsplit
-
+    from urllib.parse import urlparse, urlunsplit, parse_qs, urlsplit, urlunsplit
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
         if "/shorts/" in href:
             parsed_url = urlparse(href)
@@ -288,14 +285,10 @@ def href_format(href, platform):
             href = f"https://www.youtube.com/watch?v={video_id}"
         else:
             response = requests.head(href, allow_redirects=True)
-            if str(response) != '200':
-                return 'Возникла ошибка во время обработки youtube сылки посмотрите второе значение', str(response)
-
-        # Удаление параметров запроса
+            href = response.url
         href = href.split('&')[0]
 
         print(href)
-
 
     if platform == "inst":
         from urllib.parse import urlparse, urlunparse
@@ -309,8 +302,36 @@ def href_format(href, platform):
 
     if platform == 'tiktok':
         try:
-            response = requests.get(href, allow_redirects=True)
-            href = response.url.split('?')[0]
+            response = requests.head(href, allow_redirects=True)
+            href = response.url
+            parsed_url = urlsplit(href)
+            href = urlunsplit((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', ''))
         except Exception as e:
             return 'Возникла ошибка во время обработки TikTok сылки', str(e)
     return href
+
+
+def mytasks_task(token, platform, id):
+    data = {
+        "action": "mytasks-task",
+        "token": str(token),
+        "platform": str(platform),
+        "id": str(id)
+    }
+    response = requests.post(url_clifl, data=data).json()
+    if response['status'] != 'success':
+        return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
+    else:
+        task = response['response']
+        task = {
+            'id': str(task['id']),
+            "platform": str(task["platform"]),
+            "type": str(task["type"]),
+            "short_url": str(task["short_url"]),
+            "url": str(task["url"]),
+            "valh": str(task["valh"]),
+            "need": str(task["need"]),
+            "now": str(task["now"]),
+        }
+        return task
+
