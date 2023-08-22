@@ -1,12 +1,12 @@
-import requests
 import json
 import base64
+import requests
 
 url_clifl = "https://api.clifl.com/"
 
 
 def version():
-    return 3.3
+    return 3.5
 
 
 def balance_coin(token):
@@ -23,6 +23,7 @@ def balance_coin(token):
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
     return response['response']['coin'], 'NO'
 
+
 def balance_many(token):
     global url_clifl
 
@@ -36,6 +37,7 @@ def balance_many(token):
     if response['status'] != 'success' and response['error'] != '':
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
     return int(response['response']['money']), 'NO'
+
 
 def add_account(token, platform, url):
     global url_clifl
@@ -56,6 +58,7 @@ def add_account(token, platform, url):
                 'url': str(response['response']['url']), 'type': str(response['response']['type'])}
     return response, 'NO'
 
+
 def check_account(token, account, task):
     global url_clifl
 
@@ -73,8 +76,6 @@ def check_account(token, account, task):
     return str(response['status']), 'NO'
 
 
-import requests
-
 def get_task_list(token, platform, offset=0, limit=100):
     global url_clifl
     data = {
@@ -86,7 +87,6 @@ def get_task_list(token, platform, offset=0, limit=100):
     }
 
     response = requests.post(url_clifl, data=data).json()
-
     if response['status'] != 'success':
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
     elif not response['response']:
@@ -100,9 +100,8 @@ def get_task_list(token, platform, offset=0, limit=100):
             processed_task['id'] = int(task['id'])
             processed_task['platform'] = str(task['platform'])
             if task['type'] == 'viewg':
-                processed_task['type'] = 'view'
-            else:
-                processed_task['type'] = str(task['type'])
+                processed_task['guarantee'] = task['guarantee']
+            processed_task['type'] = str(task['type'])
             processed_task['short_url'] = str(task['short_url'])
             processed_task['url'] = str(task['url'])
             if task['valh'] == '&infin;':
@@ -116,16 +115,18 @@ def get_task_list(token, platform, offset=0, limit=100):
         return processed_tasks, 'NO'
 
 
-def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None, sec_max=None, params=None, type=None):
+def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None, sec_max=None, params=None, type=None,
+             guarantee=False):
     global url_clifl
-    from urllib.parse import parse_qs, urlparse, urlsplit, urlunsplit
-    task = {"action": "mytasks-add", "token": str(token), "platform": str(platform), "count": str(count), "valh": str(valh)}
+    from urllib.parse import urlparse, urlsplit, urlunsplit
+    task = {"action": "mytasks-add", "token": str(token), "platform": str(platform), "count": str(count),
+            "valh": str(valh)}
     if platform == 'tg' and type == 'view':
         task["coin"] = str(100)
     else:
         task["coin"] = str(coin)
-
-
+    if guarantee == True:
+        task["guarantee"] = '1'
     if type != None:
         task["type"] = str(type)
 
@@ -141,8 +142,6 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
             response = requests.head(href, allow_redirects=True)
             href = response.url
         href = href.split('&')[0]
-
-        print(href)
 
     if platform == "inst":
         from urllib.parse import urlparse, urlunparse
@@ -169,7 +168,6 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     task["href"] = str(href)
     if platform == "ytview":
         task["sec"] = str(sec)
-        print(sec)
     if platform == "ytcomm":
         comments = base64.b64encode(comments.encode('utf-8'))
         comments = comments.decode('utf-8')
@@ -198,7 +196,6 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
         params = encoded_data.decode('utf-8')
     if params != None:
         task["params"] = str(params)
-    print(task)
 
     response = requests.post(url_clifl, data=task).json()
 
@@ -243,6 +240,7 @@ def task_addition(token, platform, id, count):
     else:
         return str(response['status']), 'NO'
 
+
 def ytclients_get(token):
     global url_clifl
     data = {
@@ -274,8 +272,9 @@ def ytclients_get(token):
 
         return all_processed_tasks
 
+
 def href_format(href, platform):
-    from urllib.parse import urlparse, urlunsplit, parse_qs, urlsplit, urlunsplit
+    from urllib.parse import urlparse, urlsplit, urlunsplit
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
         if "/shorts/" in href:
             parsed_url = urlparse(href)
@@ -287,8 +286,6 @@ def href_format(href, platform):
             response = requests.head(href, allow_redirects=True)
             href = response.url
         href = href.split('&')[0]
-
-        print(href)
 
     if platform == "inst":
         from urllib.parse import urlparse, urlunparse
@@ -334,4 +331,3 @@ def mytasks_task(token, platform, id):
             "now": str(task["now"]),
         }
         return task
-
