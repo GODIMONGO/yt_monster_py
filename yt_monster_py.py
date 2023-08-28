@@ -1,4 +1,3 @@
-import json
 import base64
 import requests
 
@@ -6,7 +5,7 @@ url_clifl = "https://api.clifl.com/"
 
 
 def version():
-    return 3.5
+    return 3.6
 
 
 def balance_coin(token):
@@ -130,18 +129,23 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     if type != None:
         task["type"] = str(type)
 
-
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
+        parsed_url = urlparse(href)
+        si_url = parsed_url.query
         if "/shorts/" in href:
             parsed_url = urlparse(href)
             path = parsed_url.path
             parts = path.split('/')
             video_id = parts[-1]
             href = f"https://www.youtube.com/watch?v={video_id}"
+        elif si_url[0:2] == 'si':
+            parsed_url = parsed_url.path
+            href = 'https://www.youtube.com/watch?v=' + str(parsed_url[1:])
         else:
             response = requests.head(href, allow_redirects=True)
             href = response.url
         href = href.split('&')[0]
+
 
     if platform == "inst":
         from urllib.parse import urlparse, urlunparse
@@ -174,26 +178,6 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
         task["comments"] = str(comments)
     if platform == 'ytview' and sec_max != None:
         task["sec_max"] = sec_max
-    if platform == 'tg' and type == 'like':
-        reaction_dict = {}
-        reactions_list = params.split(',')
-
-        for reaction in reactions_list:
-            reaction_name, reaction_percentage = reaction.split(':')
-            reaction_dict[reaction_name] = int(reaction_percentage)
-
-        encoded_data = base64.b64encode(json.dumps({"reactions": reaction_dict}).encode('utf-8'))
-        params = encoded_data.decode('utf-8')
-    if platform == 'tg' and type == 'poll':
-        answers_dict = {}
-        answers_list = params.split(',')
-
-        for answer in answers_list:
-            answer_index, answer_percentage = answer.split(':')
-            answers_dict[int(answer_index)] = int(answer_percentage)
-
-        encoded_data = base64.b64encode(json.dumps({"poll": answers_dict}).encode('utf-8'))
-        params = encoded_data.decode('utf-8')
     if params != None:
         task["params"] = str(params)
 
@@ -276,12 +260,17 @@ def ytclients_get(token):
 def href_format(href, platform):
     from urllib.parse import urlparse, urlsplit, urlunsplit
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
+        parsed_url = urlparse(href)
+        si_url = parsed_url.query
         if "/shorts/" in href:
             parsed_url = urlparse(href)
             path = parsed_url.path
             parts = path.split('/')
             video_id = parts[-1]
             href = f"https://www.youtube.com/watch?v={video_id}"
+        elif si_url[0:2] == 'si':
+            parsed_url = parsed_url.path
+            href = 'https://www.youtube.com/watch?v=' + str(parsed_url[1:])
         else:
             response = requests.head(href, allow_redirects=True)
             href = response.url
