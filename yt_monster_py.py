@@ -1,11 +1,12 @@
 import base64
 import requests
+from pytube import YouTube
 
 url_clifl = "https://api.clifl.com/"
 
 
 def version():
-    return 3.6
+    return 3.9
 
 
 def balance_coin(token):
@@ -121,7 +122,9 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     task = {"action": "mytasks-add", "token": str(token), "platform": str(platform), "count": str(count),
             "valh": str(valh)}
     if platform == 'tg' and type == 'view':
-        task["coin"] = str(100)
+        task["coin"] = '100'
+    if platform == 'tiktok' and type == 'view':
+        task["coin"] = '1'
     else:
         task["coin"] = str(coin)
     if guarantee == True:
@@ -129,47 +132,11 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
     if type != None:
         task["type"] = str(type)
 
-    if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
-        parsed_url = urlparse(href)
-        si_url = parsed_url.query
-        if "/shorts/" in href:
-            parsed_url = urlparse(href)
-            path = parsed_url.path
-            parts = path.split('/')
-            video_id = parts[-1]
-            href = f"https://www.youtube.com/watch?v={video_id}"
-        elif si_url[0:2] == 'si':
-            parsed_url = parsed_url.path
-            href = 'https://www.youtube.com/watch?v=' + str(parsed_url[1:])
-        else:
-            response = requests.head(href, allow_redirects=True)
-            href = response.url
-        href = href.split('&')[0]
-
-
-    if platform == "inst":
-        from urllib.parse import urlparse, urlunparse
-        parsed_url = urlparse(href.encode('utf-8'))
-        netloc_parts = parsed_url.netloc.split(b'.')
-        if len(netloc_parts) == 2 and netloc_parts[0] == b'instagram':
-            netloc_parts.insert(0, b'www')
-            new_netloc = b'.'.join(netloc_parts)
-            new_parsed_url = parsed_url._replace(netloc=new_netloc)
-            href = urlunparse(new_parsed_url).decode('utf-8')
-
-    if platform == 'tiktok':
-        try:
-            response = requests.head(href, allow_redirects=True)
-            href = response.url
-            parsed_url = urlsplit(href)
-            href = urlunsplit((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', ''))
-        except Exception as e:
-            return 'Возникла ошибка во время обработки TikTok сылки', str(e)
-
-
+    href = href_format(href, platform)
     href = base64.b64encode(href.encode('utf-8'))
     href = href.decode('utf-8')
     task["href"] = str(href)
+
     if platform == "ytview":
         task["sec"] = str(sec)
     if platform == "ytcomm":
@@ -178,10 +145,12 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
         task["comments"] = str(comments)
     if platform == 'ytview' and sec_max != None:
         task["sec_max"] = sec_max
+
     if params != None:
         task["params"] = str(params)
 
     response = requests.post(url_clifl, data=task).json()
+    print(response)
 
     if response['status'] != 'success' and response['error'] != '':
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
@@ -196,11 +165,14 @@ def task_remove(token, platform,  id):
         "id": str(id),
         "token": str(token)
     }
-
+    print(params)
     response = requests.post(url_clifl, data=params).json()
-
-    if response['status'] != 'success' and response['error'] != '':
-        return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
+    print(response)
+    if response['status'] != 'success':
+        try:
+            return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
+        except:
+            return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error_response']
     return str(response['status']), 'NO'
 
 
@@ -258,23 +230,9 @@ def ytclients_get(token):
 
 
 def href_format(href, platform):
-    from urllib.parse import urlparse, urlsplit, urlunsplit
+    from urllib.parse import urlsplit, urlunsplit
     if platform == "ytview" or platform == "ytlike" or platform == "ytcomm":
-        parsed_url = urlparse(href)
-        si_url = parsed_url.query
-        if "/shorts/" in href:
-            parsed_url = urlparse(href)
-            path = parsed_url.path
-            parts = path.split('/')
-            video_id = parts[-1]
-            href = f"https://www.youtube.com/watch?v={video_id}"
-        elif si_url[0:2] == 'si':
-            parsed_url = parsed_url.path
-            href = 'https://www.youtube.com/watch?v=' + str(parsed_url[1:])
-        else:
-            response = requests.head(href, allow_redirects=True)
-            href = response.url
-        href = href.split('&')[0]
+        href = f'https://www.youtube.com/watch?v={YouTube(str(href)).video_id}'
 
     if platform == "inst":
         from urllib.parse import urlparse, urlunparse
@@ -309,14 +267,21 @@ def mytasks_task(token, platform, id):
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
     else:
         task = response['response']
-        task = {
-            'id': str(task['id']),
-            "platform": str(task["platform"]),
-            "type": str(task["type"]),
-            "short_url": str(task["short_url"]),
-            "url": str(task["url"]),
-            "valh": str(task["valh"]),
-            "need": str(task["need"]),
-            "now": str(task["now"]),
-        }
-        return task
+        if response['response'] == 'error':
+            return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
+        else:
+            try:
+                task = task[0]
+                task = {
+                    'id': str(task['id']),
+                    "platform": str(task["platform"]),
+                    "type": str(task["type"]),
+                    "short_url": str(task["short_url"]),
+                    "url": str(task["url"]),
+                    "valh": str(task["valh"]),
+                    "need": str(task["need"]),
+                    "now": str(task["now"]),
+                }
+                return task, ''
+            except:
+                return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', ''
