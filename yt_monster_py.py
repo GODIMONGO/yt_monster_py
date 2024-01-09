@@ -6,7 +6,7 @@ url_clifl = "https://api.clifl.com/"
 
 
 def version():
-    return 3.9
+    return 4.0
 
 
 def balance_coin(token):
@@ -150,8 +150,6 @@ def add_task(token, platform, href, count, coin, valh=0, sec=None, comments=None
         task["params"] = str(params)
 
     response = requests.post(url_clifl, data=task).json()
-    print(response)
-
     if response['status'] != 'success' and response['error'] != '':
         return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
     return response['id'], 'NO'
@@ -165,9 +163,8 @@ def task_remove(token, platform,  id):
         "id": str(id),
         "token": str(token)
     }
-    print(params)
     response = requests.post(url_clifl, data=params).json()
-    print(response)
+
     if response['status'] != 'success':
         try:
             return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response['error']
@@ -196,6 +193,46 @@ def task_addition(token, platform, id, count):
     else:
         return str(response['status']), 'NO'
 
+
+def streams_add(token, platform, nickname, tariff, currency, duration, viewers=0, ratio=0):
+    global url_clifl
+    data = {
+        "action": "streams-add",
+        "platform": str(platform),
+        "nickname": str(nickname),
+        "tariff": str(tariff),
+        "currency": str(currency),
+        "duration": str(duration),
+        "token": str(token)
+    }
+    if viewers != 0:
+        data[viewers] = str(viewers)
+    if ratio != 0:
+        data[ratio] = str(ratio)
+
+    response = requests.post(url_clifl, data=data).json()
+
+    if response['status'] != 'success':
+        if response.get('error') != None:
+            return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
+        else:
+            return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error_response')
+    else:
+        return response['response'], 'NO'
+
+def streams_get(token, id):
+    data = {
+        "action": "streams-get",
+        "id": str(id),
+        "token": str(token)
+    }
+
+    response = requests.post(url_clifl, data=data).json()
+
+    if response['status'] != 'success':
+        return 'Возникла ошибка. Пожалуйста, проверьте второе значение!', response.get('error')
+    else:
+        return response['response'], 'NO'
 
 def ytclients_get(token):
     global url_clifl
@@ -226,7 +263,7 @@ def ytclients_get(token):
             }
             all_processed_tasks.append(processed_task)
 
-        return all_processed_tasks
+        return all_processed_tasks, 'NO'
 
 
 def href_format(href, platform):
